@@ -140,3 +140,32 @@ Simulated with the fitted model from section 2: only the device is swapped, ever
 * These were simulated with one datasheet-class model (`sim/diodes_fit.lib`): VF ≈ 1.0 V at 0.16 A, CJ ≈ 8 pF at 4 V. The manufacturers' models could not be downloaded from the simulation environment.
 * Avoid standard and "fast" recovery parts with trr of 75 ns or more (BYG20J, UF400x, 1N400x). BYG20J simulated *worse* than the QH05TZ600.
 * The QH05TZ600 itself works fine; it is simply oversized (TO-220, 5 A).
+
+## 6. Cheaper parts with the same efficiency
+
+The MOSFET and diode are a small part of the loss budget, so cheap parts can match the current ones. The runs are in `sim/cheap.sh`.
+
+To see how far "cheap" can go, the MOSFET was replaced by a generic switch (`sim/genfet.lib`). Its on-resistance, gate charge and output capacitance were swept, with the diode kept as QH05TZ600. As a calibration, the generic switch with CSD18533-like values gives 80.5 %, against 79.6 % for TI's real model. So compare the generic rows with each other rather than with the real-model rows.
+
+| MOSFET (60 V, logic level) | R_DS(on) @ 4.5 V | Qg | η | Pout | Peak Vds |
+|---|---|---|---|---|---|
+| Generic, CSD18533-like (calibration) | 6.5 mΩ | ~15 nC | 80.5 % | 0.94 W | 33 V |
+| Generic, CSD18543Q3A-like | 15 mΩ | ~10 nC | 81.4 % | 0.90 W | 36 V |
+| Generic, FQP30N06L-like | 50 mΩ | ~15 nC | 80.7 % | 0.89 W | 36 V |
+| Generic, IRLZ44N-like | 35 mΩ | ~48 nC | 79.8 % (driver loss 22 mW) | 0.90 W | 34 V |
+| Generic, small SOT-23-class | 100 mΩ | ~3 nC | 80.3 % | 0.88 W | **62 V** |
+| Generic, tiny | 200 mΩ | ~2 nC | 78.5 % | 0.86 W | **70 V** |
+| **TI CSD18541F5** (real TI model, 1.5 × 0.8 mm package) | 58 mΩ | – | 80.4 % | 0.89 W | 22 V |
+
+What this shows:
+* **Any 60 V logic-level MOSFET with R_DS(on) ≤ ~50 mΩ at 4.5 V and Qg ≤ ~20 nC gives the same efficiency, within ±1 point.**
+* Very small parts (≤ ~100 pF output capacitance) damp the leakage spike less. Their peak Vds rose above 60 V in simulation. The simulation overestimates this spike (49 V simulated vs 28 V measured on board 0.2), but very small parts still need an RCD clamp or an 80–100 V rating.
+* **IRLZ44N is not a good cheap choice:** it is only 55 V, and its 48 nC gate charge costs about 1 point in driver loss.
+
+Prices (TI store; single unit → 1k+, Nov 2026): CSD18533KCS $1.39 → $0.56, CSD18534KCS $1.04 → $0.42, CSD18543Q3A $0.44 → $0.23, CSD18541F5 $0.14 → $0.07.
+
+The diodes are a bigger saving. QH05TZ600 costs about $0.9–1.8. STTH1R06A costs about $0.10–0.12, and MUR160 about $0.04–0.25, depending on the maker (LCSC). The 600 V/1 A ultrafast class simulated in section 5 is as good as or better than QH05TZ600: +0.5 point.
+
+**Cheapest option with the same or better efficiency:**
+* **CSD18543Q3A + STTH1R06A (or MUR160 / ES1J):** about $0.3–0.6 instead of about $1.8–3.2. Simulated 81.4 % vs 79.6 % for the board-0.2 parts. The SON-8 MOSFET needs a small adapter board on perfboard.
+* Through-hole only: **CSD18534KCS + MUR160 or STTH1R06** (DO-41), about $0.5–1.3.

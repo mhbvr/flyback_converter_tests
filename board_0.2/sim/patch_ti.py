@@ -17,7 +17,7 @@ def sub(m):
     return '%.6g' % ev(e.lower())
 s = re.sub(r'\{([^{}]+)\}', sub, s)
 # make the helper capacitance subcircuits unique per part (identical names in every TI lib)
-part = re.search(r'(?mi)^\.SUBCKT\s+(\S+)\s+1\s+2\s+3\s*$', s).group(1).lower()
+part = re.findall(r'(?mi)^\.SUBCKT\s+(\S+)\s+\S+\s+\S+\s+\S+\s*$', s)[-1].lower()
 for c in ('cgs', 'cgd', 'cds'):
     s = re.sub(r'(?mi)^(\.subckt\s+)%s(\s)' % c, r'\g<1>%s_%s\2' % (c, part), s)
     s = re.sub(r'(?mi)^(\.ends\s+)%s\b' % c, r'\g<1>%s_%s' % (c, part), s)
