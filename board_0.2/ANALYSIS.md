@@ -106,3 +106,37 @@ cd board_0.2/sim
 ```
 
 The netlist is `sim/flyback.cir`, and `.spiceinit` selects PSpice compatibility mode.
+
+## 5. Better MOSFET and diode?
+
+Simulated with the fitted model from section 2: only the device is swapped, everything else stays the same. Cases are in `sim/cands.sh` and `sim/cands_eqp.sh`. Changing the device changes the node capacitance, which shifts the phase of the 565 kHz ring at turn-on, so output power moves at a fixed on-time. Each candidate was therefore run twice: once at the same t_on = 3.4 µs, and once with t_on scaled up for higher output power.
+
+| MOSFET + diode | Model source | η @ t_on 3.4 µs (Pout) | η @ higher Pout |
+|---|---|---|---|
+| CSD18533KCS + QH05TZ600 (board 0.2) | TI / datasheet fit | 79.6 % (1.05 W) | – |
+| CSD18533KCS + **BYG20J** | TI / **Vishay model** | 78.9 % (1.05 W) – worse | – |
+| **CSD18534KCS** + QH05TZ600 | **TI model** | 80.2 % (0.93 W) | 79.9 % (1.18 W) |
+| **CSD18543Q3A** + QH05TZ600 | **TI model** | 80.2 % (0.94 W) | 79.9 % (1.16 W) |
+| CSD18533KCS + 600 V/1 A ultrafast class | TI / datasheet-class fit | 80.1 % (0.98 W) | 80.1 % (1.12 W) |
+| CSD18534KCS + 600 V/1 A ultrafast | TI / datasheet-class fit | 81.4 % (0.91 W) | 80.3 % (1.16 W) |
+| CSD18543Q3A + 600 V/1 A ultrafast | TI / datasheet-class fit | 81.4 % (0.91 W) | 80.3 % (1.17 W) |
+| *Ideal switch (6 mΩ, no capacitance) + ideal diode* | bound | *83.2 % (1.02 W)* | – |
+| CSD18543Q3A + ultrafast + low-ESR input capacitor + valley turn-on | | 88.7 % (1.29 W) | – (the same fixes with the board-0.2 devices: 88.4 %) |
+
+**Conclusion.** Perfect semiconductors would add at most about 3.6 points. Realistic swaps add about 0.5–1.8 points. That is the same size as the effect of where in the ring the switch turns on, so the device choice is a minor knob here. The input capacitor (+7 points) and valley turn-on (+2 points) matter more.
+
+**Recommended MOSFET**
+* **CSD18534KCS (TO-220)** is a drop-in replacement on the perfboard: same pinout, 60 V, logic level, Qg 19 nC instead of 28 nC (at 10 V), Qgd 3.1 nC, R_DS(on) ≤ 13.3 mΩ at 4.5 V.
+* **CSD18543Q3A (SON 3.3 × 3.3)** for a PCB: Qg 11 nC, Qgd 1.7 nC, R_DS(on) ≤ 15.6 mΩ at 4.5 V. It has the lowest driver loss.
+* Do **not** go for lower R_DS(on): conduction loss is only about 2 mW at 0.62 A rms. Gate charge and capacitance matter more than resistance.
+* Keep the part logic-level, because the gate only sees 4–4.8 V. Non-logic-level parts such as CSD18537NKCS (Vth 3 V) are a bad fit.
+* 60 V is enough at 172 V output (measured peak 28 V; the simulation, which lacks the real damping, gives 46–51 V). If you move toward the transformer's 300 V rating, the reflected voltage roughly doubles. Then add an RCD clamp or use an 80–100 V logic-level part.
+
+**Recommended diode**
+* The peak reverse voltage reaches about 255 V measured (about 300 V in simulation), because of the secondary ringing at turn-on. Keep **600 V**. 1 A is plenty: average current is 5.5 mA, peak about 0.2 A.
+* Pick an **ultrafast part (trr ≤ 35 ns) with low junction capacitance**:
+  * through-hole: **STTH1R06** (DO-41) or **MUR160**;
+  * SMD: **ES1J**, **RFN1LAM6S** or **STTH1R06A**.
+* These were simulated with one datasheet-class model (`sim/diodes_fit.lib`): VF ≈ 1.0 V at 0.16 A, CJ ≈ 8 pF at 4 V. The manufacturers' models could not be downloaded from the simulation environment.
+* Avoid standard and "fast" recovery parts with trr of 75 ns or more (BYG20J, UF400x, 1N400x). BYG20J simulated *worse* than the QH05TZ600.
+* The QH05TZ600 itself works fine; it is simply oversized (TO-220, 5 A).
