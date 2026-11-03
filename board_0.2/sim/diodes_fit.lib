@@ -1,0 +1,4 @@
+* Datasheet-fitted diode models (no vendor SPICE model obtainable)
+* Generic 600 V / 1 A ultrafast class (ES1J, STTH1R06, RFN1LAM6S, MURS160 ...):
+*   VF ~1.25 V @ 1 A, ~1.0 V @ 0.16 A, CJ ~8 pF @ 4 V (~1.5 pF @ 200 V), trr 25-35 ns
+.model UF600 D(IS=5e-10 N=1.9 RS=0.2 CJO=19p VJ=0.7 M=0.45 TT=20n BV=600 IBV=5u)

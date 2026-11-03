@@ -1,0 +1,12 @@
+CSD18533KCS.lib
+*.dat
+*.npy
+*.log
+*.res
+*.res2
+*.x
+*_run.cir
+CSD18534KCS.lib
+CSD18543Q3A.lib
+byg20j.lib
+CSD18541F5.lib

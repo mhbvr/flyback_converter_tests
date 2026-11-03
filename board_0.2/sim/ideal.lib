@@ -1,0 +1,9 @@
+* Ideal reference devices (for bounding what a device swap can gain)
+.subckt IDEALFET d g s
+S1 d s g s swi
+.model swi sw(vt=2.5 vh=0.2 ron=6m roff=1e8)
+Dbd s d dbi
+.model dbi D(IS=1e-14 N=1 CJO=1p RS=1m)
+Cg g s 1p
+.ends
+.model DIDEAL D(IS=1e-9 N=0.2 RS=1m CJO=0.1p)

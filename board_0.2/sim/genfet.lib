@@ -1,0 +1,11 @@
+* Generic MOSFET for sensitivity sweeps (datasheet-level, NOT a vendor model):
+*   ron  = on-resistance at Vgs~4.5 V, cg = effective gate capacitance (Qg@5V ~ cg*5V),
+*   coss = output capacitance (linear), vth ~ 2 V, body diode included
+.subckt GENFET d g s ron=10m cg=2n coss=300p
+S1 d s g s swg
+.model swg sw(vt=2.0 vh=0.3 ron={ron} roff=1e8)
+Dbd s d dbg
+.model dbg D(IS=1e-12 N=1 RS=5m CJO=1p TT=20n)
+Cgs g s {cg}
+Cds d s {coss}
+.ends

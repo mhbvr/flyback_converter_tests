@@ -1,0 +1,69 @@
+* Board 0.2 flyback: MCP1407 + CSD18533KCS + DA2033-AL + QH05TZ600
+.include CSD18533KCS.lib
+.param fsw=100k ton=3.40u vin=4.8
+* Values marked (fit) were adjusted so the simulation matches the scope captures:
+*  Lp 9.5u (datasheet 10u +-10%), resr 0.45 (rail droop), csec 63p (565 kHz ring), rcore 1k (ring decay tau=16us), rlkp 150 (leakage ring damping)
+.param Lp=9.5u n=10 kc=0.99995 llk=0.144u rlkp=150
+.param resr=0.45 rlead=0.15 llead=1.5u lwire=40n csec=63p rcore=1k cprobe_d=15p cprobe_s=0
+.param vtop=180
+
+* ---- bench supply + leads (measurement point of Vin/Iin = node "bench") ----
+Vbench bench 0 {vin}
+Vsin bench b1 0
+Rlead b1 b2 {rlead}
+Llead b2 vdd {llead}
+* ---- local decoupling (only at MCP1407): 10uF electrolytic + 100nF ceramic ----
+Vsc vdd c1 0
+Cel c1 c1a 10u ic={vin}
+Resr c1a c1b {resr}
+Lesl c1b 0 10n
+Cc vdd c2 100n ic={vin}
+Rcc c2 0 20m
+* ---- PWM generator 3.3 V -> MCP1407 (behavioural, datasheet: Roh 2.1, Rol 1.5 ohm, td 40-100 ns) ----
+Vpwm pwm 0 PULSE(0 3.3 2u 5n 5n {ton} {1/fsw})
+Vsdrv vdd vddrv 0
+* driver input delayed ~100 ns (as measured PWM->gate)
+Edl pwmd 0 pwm 0 1
+Tdl pwmd 0 pwmx 0 Z0=50 TD=90n
+Rdl pwmx 0 50
+Binv pwmn 0 V=3.3-2*V(pwmx)
+Sh vddrv gd pwmx 0 swh
+Sl gd 0 pwmn 0 swh
+.model swh sw(vt=0.825 vh=0 ron=2.1 roff=1e6)
+Iq vddrv 0 0.5m
+Lg gd g 15n
+* ---- primary: vdd -> wiring -> DA2033 primary -> drain ----
+Vsp vdd p1 0
+Rw p1 p2 30m
+Lw p2 pdot {lwire}
+Vslp pdot pl 0
+Llk pl pl2 {llk}
+Rlkp pl pl2 {rlkp}
+Lpri pl2 d0 {Lp}
+Rp_dcr d0 d 15m
+Rcore pdot d {rcore}
+Vsm d dm 0
+X1 dm g 0 CSD18533KCS
+Rpr_d d 0 10Meg
+Cpr_d d 0 {cprobe_d}
+* ---- secondary ----
+Vss sg 0 0
+Lsec sg s0 {Lp*n*n}
+Rs_dcr s0 s 1.1
+Ksx Lpri Lsec {kc}
+Csw s 0 {csec}
+Cpr_s s 0 {cprobe_s}
+D1 s out QH05
+Vsd out out1 0
+Cout out1 co 2.2u ic={vtop}
+Rco co 0 10m
+Rload out1 0 31160
+* QH05TZ600 fitted to datasheet: VF=2.6V@5A, CJ=17pF@10V, Qrr~6.5nC
+.model QH05 D(IS=2e-12 N=2.1 RS=0.16 CJO=55p VJ=0.7 M=0.45 TT=4n BV=600 IBV=50u)
+.options method=gear reltol=5e-4 abstol=1e-8 vntol=1e-4 itl4=100
+.tran 2n 400u 300u 2n uic
+.control
+run
+wrdata out.dat v(bench) i(Vsin) v(vdd) v(g) v(d) v(s) v(out) i(Vsp) i(Vsd) i(Vsdrv) i(Vsc) v(pwm) i(Vslp) i(Vsm) i(Vss) v(pdot)
+.endc
+.end
