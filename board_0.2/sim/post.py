@@ -26,6 +26,7 @@ r['other (leakage damping, ceramics, probes)']=r['Pin (bench)']-r['Pout (into Co
 r['Vout']=avg(c['out'])
 r['Vout steady (sqrt(P*R))']=np.sqrt(r['Pout (into Cout+R)']*31160)
 r['eff']=r['Pout (into Cout+R)']/r['Pin (bench)']
+r['Vds max']=c['d'].max(); r['diode Vrev max']=(c['out']-c['s']).max()
 r['Ipk primary']=c['ism'].max(); r['Irms primary']=np.sqrt(avg(c['isp']**2))
 r['vdd min/max']=(c['vdd'].min(),c['vdd'].max())
 r['gate min during on']=c['g'][(c['pwm']>2)].min() if 1 else 0
