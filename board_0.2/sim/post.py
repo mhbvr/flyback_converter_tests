@@ -1,8 +1,12 @@
 import numpy as np, sys, json
 fn=sys.argv[1] if len(sys.argv)>1 else 'out.dat'
-P=dict(rlead=0.15,resr=0.45,rw=0.030,rp=0.015,rs=1.1,rcore=1000.,rcc=0.02)
+P=dict(rlead=0.15,resr=0.45,rw=0.030,rload=31160.,rp=0.015,rs=1.1,rcore=1000.,rcc=0.02)
 for a in sys.argv[2:]:
-    k,v=a.split('='); P[k]=float(v.replace('k','e3').replace('m','e-3'))
+    k,v=a.split('='); v=v.lower(); m={'meg':1e6,'k':1e3,'m':1e-3,'u':1e-6,'n':1e-9}
+    f=1.0
+    for s_,f_ in m.items():
+        if v.endswith(s_): v=v[:-len(s_)]; f=f_; break
+    P[k]=float(v)*f
 d=np.loadtxt(fn); names=['bench','iin','vdd','g','d','s','out','isp','isd','isdrv','isc','pwm','ilp','ism','iss','pdot']
 cols={n:d[:,2*i+1] for i,n in enumerate(names)}; t=d[:,0]
 pw0=cols['pwm']; ed=t[np.where((pw0[:-1]<1.65)&(pw0[1:]>=1.65))[0]]
@@ -24,7 +28,8 @@ r['diode']=avg((c['s']-c['out'])*c['isd'])
 r['Pout (into Cout+R)']=avg(c['out']*c['isd'])
 r['other (leakage damping, ceramics, probes)']=r['Pin (bench)']-r['Pout (into Cout+R)']-sum(v for k,v in r.items() if k not in ('Pin (bench)','Iin avg','Pout (into Cout+R)'))
 r['Vout']=avg(c['out'])
-r['Vout steady (sqrt(P*R))']=np.sqrt(r['Pout (into Cout+R)']*31160)
+r['Vout steady (sqrt(P*R))']=np.sqrt(r['Pout (into Cout+R)']*P['rload'])
+r['Iout mA']=r['Vout steady (sqrt(P*R))']/P['rload']*1e3
 r['eff']=r['Pout (into Cout+R)']/r['Pin (bench)']
 r['Vds max']=c['d'].max(); r['diode Vrev max']=(c['out']-c['s']).max()
 r['Ipk primary']=c['ism'].max(); r['Irms primary']=np.sqrt(avg(c['isp']**2))
