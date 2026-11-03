@@ -1,0 +1,8 @@
+CSD18533KCS.lib
+*.dat
+*.npy
+*.log
+*.res
+*.res2
+*.x
+*_run.cir
