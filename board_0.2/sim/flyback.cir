@@ -6,6 +6,7 @@
 .param Lp=9.5u n=10 kc=0.99995 llk=0.144u rlkp=150
 .param resr=0.45 rlead=0.15 llead=1.5u lwire=40n csec=63p rcore=1k cprobe_d=15p cprobe_s=0
 .param vtop=180
+.param cel=10u lesl=10n rw=30m rload=31160
 
 * ---- bench supply + leads (measurement point of Vin/Iin = node "bench") ----
 Vbench bench 0 {vin}
@@ -14,9 +15,9 @@ Rlead b1 b2 {rlead}
 Llead b2 vdd {llead}
 * ---- local decoupling (only at MCP1407): 10uF electrolytic + 100nF ceramic ----
 Vsc vdd c1 0
-Cel c1 c1a 10u ic={vin}
+Cel c1 c1a {cel} ic={vin}
 Resr c1a c1b {resr}
-Lesl c1b 0 10n
+Lesl c1b 0 {lesl}
 Cc vdd c2 100n ic={vin}
 Rcc c2 0 20m
 * ---- PWM generator 3.3 V -> MCP1407 (behavioural, datasheet: Roh 2.1, Rol 1.5 ohm, td 40-100 ns) ----
@@ -34,7 +35,7 @@ Iq vddrv 0 0.5m
 Lg gd g 15n
 * ---- primary: vdd -> wiring -> DA2033 primary -> drain ----
 Vsp vdd p1 0
-Rw p1 p2 30m
+Rw p1 p2 {rw}
 Lw p2 pdot {lwire}
 Vslp pdot pl 0
 Llk pl pl2 {llk}
@@ -57,7 +58,7 @@ D1 s out QH05
 Vsd out out1 0
 Cout out1 co 2.2u ic={vtop}
 Rco co 0 10m
-Rload out1 0 31160
+Rload out1 0 {rload}
 * QH05TZ600 fitted to datasheet: VF=2.6V@5A, CJ=17pF@10V, Qrr~6.5nC
 .model QH05 D(IS=2e-12 N=2.1 RS=0.16 CJO=55p VJ=0.7 M=0.45 TT=4n BV=600 IBV=50u)
 .options method=gear reltol=5e-4 abstol=1e-8 vntol=1e-4 itl4=100

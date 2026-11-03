@@ -169,3 +169,53 @@ The diodes are a bigger saving. QH05TZ600 costs about $0.9–1.8. STTH1R06A cost
 **Cheapest option with the same or better efficiency:**
 * **CSD18543Q3A + STTH1R06A (or MUR160 / ES1J):** about $0.3–0.6 instead of about $1.8–3.2. Simulated 81.4 % vs 79.6 % for the board-0.2 parts. The SON-8 MOSFET needs a small adapter board on perfboard.
 * Through-hole only: **CSD18534KCS + MUR160 or STTH1R06** (DO-41), about $0.5–1.3.
+
+## 7. How the hackaday designs reach ~90 %, and what that means at 5 V
+
+Two published 170 V nixie supplies use the same Coilcraft DA203x transformer family and report about 90 %:
+
+| | [LT3757 supply (hackaday 162301)](https://hackaday.io/project/162301-high-voltage-nixie-power-supply) | [LM5155 flyback (hackaday 170962)](https://hackaday.io/project/170962) | Board 0.2 |
+|---|---|---|---|
+| Controller | LT3757: peak-current-mode with integrated gate driver | LM5155: peak-current-mode, DCM | External PWM generator + MCP1407 |
+| Transformer | DA2032 (3 A) | DA2032 (3 A) | DA2033 (5 A) |
+| Switching frequency | not stated | 350 → 150 → 100/120 kHz (DCM). Lowering it raised efficiency from 75–80 % to about 90 %. | 100 kHz, DCM |
+| **Input capacitors** | **4 × 47 µF X5R 1210 ceramic** at the primary; "input directly to primary, no vias" | **ceramics moved next to the transformer**, plus 1 µF parts; input ripple halved | **one 10 µF electrolytic** near the driver |
+| MOSFET | IRLR3110Z (100 V, 12 mΩ, 34 nC) | BSC059N04LS6 (40 V) | CSD18533KCS (60 V) |
+| Diode | RFN1LAM6S (600 V, 35 ns). ES1G also works. | ES1J → VS-3EMH06 (600 V). The 600 V rating matters because of recovery ringing. | QH05TZ600 |
+| Snubber | removed (it raised efficiency) | removed | none |
+| Construction | PCB with a short, wide primary loop | PCB | perfboard |
+| Load at which ~90 % is reported | 9–12 V input, 20–40 mA (3.4–6.8 W) | 9–12 V input, high load | 5 V input, 5.5 mA (0.95 W) |
+| At 5 V input | "over 80 %", falling quickly past 20 mA | thermal derate to 25 mA (transformer warms; possible thermal runaway) | 72 % |
+| At light load | **71 % at 12 V input and about 5 mA** | – | 72 % |
+
+Key point: the ~90 % figures are measured at **3–7 W and 9–12 V input**. At an operating point like board 0.2 (about 5 mA), the LT3757 board measured 71 %, about the same as board 0.2. At 5 V input both projects report lower efficiency than at 9–12 V: "over 80 %" for the LT3757 board, and a thermal derate for the LM5155 board.
+
+### Simulation: board 0.2 vs. the "hackaday recipe" with the same DA2033 transformer
+
+The recipe (`sim/hackaday.sh`) applies these changes:
+* about 120 µF of ceramic input capacitance at the primary (ESR 2 mΩ, ESL 1 nH);
+* a PCB-like primary loop (8 mΩ, 10 nH);
+* CSD18543Q3A plus the 600 V/1 A ultrafast diode class.
+
+Fixed 100 kHz, no valley tuning.
+
+| Input | Load | Board 0.2 as built | Hackaday recipe |
+|---|---|---|---|
+| 5 V | 5.5 mA (0.9–1.0 W) | 79.6 % | **90.3 %** |
+| 5 V | ~14 mA (2.3 W) | 80.9 % (0.26 W lost in the electrolytic ESR, 0.07 W in leads) | **91.6 %** |
+| 5 V | ~23 mA (3.5–3.8 W) | 80.7 % (0.40 W ESR, 0.15 W leads) | **91.5 %** |
+| 9 V | ~26 mA (4.6 W) | – | 92.0 % |
+| 12 V | ~26 mA (4.5 W) | – | 93.7 % |
+
+The board 0.2 rows use 4.8 V input, as measured; the recipe rows use 5 V.
+
+**Caveat.** This model was **7.4 points optimistic** against the measured board 0.2 (79.6 % vs 72.2 %). Most likely that is extra core/AC-winding loss, which the linear core-loss resistor does not capture (section 3). Expect roughly mid-to-high 80s at 5 V in practice, which is consistent with the "over 80 %" the LT3757 project measured at 5 V. Reaching ~90 % at 5 V on the bench should be possible at 2–4 W with:
+
+1. **Ceramic input capacitors directly at the transformer primary / MOSFET source loop.** Use 2–4 × 22–47 µF X5R/X7R, rated 16–25 V because of DC-bias derating. This is the single largest gain: about +10 points at 1 W, more at higher load.
+2. **Low-resistance supply wiring.** At 5 V the input current is 0.2–0.9 A, so short, thick leads matter. Measure Vin at the board (or use 4-wire sensing). At 23 mA the leads alone cost 0.1–0.15 W.
+3. **A PCB or a very tight primary loop** instead of perfboard wiring.
+4. **A 600 V ultrafast diode** (STTH1R06, ES1J, RFN1LAM6S, MUR160); no snubber resistor.
+5. **Running at a higher power** if your nixie load allows it. Fixed losses per cycle (ring, capacitive turn-on, driver, core) weigh less at 2–4 W than at 1 W.
+6. **Optionally, a peak-current-mode controller** (LT3757, LM5155, or the LT3750 that DA203x was designed for). It regulates Vout, limits transformer peak current, and drives the gate from its own supply. Valley timing (section 4) adds about 1–2 points more.
+
+**Watch the drain voltage at higher load.** In simulation the turn-off spike reached about 62 V at 2.3–3.5 W (the simulation overestimates it by about 20 V compared with board 0.2's measurement). For more than about 2 W, use an 80–100 V logic-level MOSFET (the LT3757 project chose 100 V for this reason) or an RCD clamp. The hackaday authors found that a resistive snubber costs efficiency.
